@@ -36,6 +36,7 @@ class VehicleRead(BaseModel):
     category: str
     price: Decimal
     quantity: int
+    image_filename: str | None
     created_at: datetime
     updated_at: datetime
 

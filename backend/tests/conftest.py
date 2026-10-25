@@ -20,18 +20,24 @@ from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
 
+test_database_url = os.getenv("TEST_DATABASE_URL", "sqlite://")
 test_engine = create_engine(
-    "sqlite://",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
+    test_database_url,
+    connect_args={"check_same_thread": False} if test_database_url == "sqlite://" else {},
+    poolclass=StaticPool if test_database_url == "sqlite://" else None,
 )
 TestingSessionLocal = sessionmaker(bind=test_engine, autocommit=False, autoflush=False)
 
 
 @pytest.fixture(autouse=True)
 def database() -> Generator[None, None, None]:
-    Base.metadata.drop_all(bind=test_engine)
-    Base.metadata.create_all(bind=test_engine)
+    if test_database_url == "sqlite://":
+        Base.metadata.drop_all(bind=test_engine)
+        Base.metadata.create_all(bind=test_engine)
+    else:
+        with test_engine.begin() as connection:
+            for table in reversed(Base.metadata.sorted_tables):
+                connection.execute(table.delete())
 
     def override_get_db() -> Generator[Session, None, None]:
         db = TestingSessionLocal()

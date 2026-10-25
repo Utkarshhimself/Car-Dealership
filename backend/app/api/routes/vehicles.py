@@ -4,7 +4,7 @@ import uuid
 from decimal import Decimal
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import func, or_, select
 
 from app.api.dependencies import CurrentUser, DbSession, require_admin
@@ -17,6 +17,7 @@ from app.services.inventory import (
     purchase_vehicle,
     restock_vehicle,
 )
+from app.services.uploads import save_vehicle_image
 
 router = APIRouter(prefix="/vehicles", tags=["vehicles"])
 
@@ -113,6 +114,27 @@ def update_vehicle(vehicle_id: uuid.UUID, payload: VehicleUpdate, db: DbSession)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(vehicle, field, value)
 
+    db.commit()
+    db.refresh(vehicle)
+    return vehicle
+
+
+@router.post(
+    "/{vehicle_id}/image",
+    response_model=VehicleRead,
+    dependencies=[Depends(require_admin)],
+)
+async def upload_vehicle_image(
+    vehicle_id: uuid.UUID,
+    db: DbSession,
+    image: Annotated[UploadFile, File()],
+) -> Vehicle:
+    """Upload or replace an image associated with a vehicle."""
+    vehicle = db.get(Vehicle, vehicle_id)
+    if vehicle is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found")
+
+    vehicle.image_filename = await save_vehicle_image(image)
     db.commit()
     db.refresh(vehicle)
     return vehicle

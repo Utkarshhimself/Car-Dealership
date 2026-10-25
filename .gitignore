@@ -17,6 +17,7 @@ htmlcov/
 node_modules/
 dist/
 coverage/
+*.tsbuildinfo
 
 # Editors and operating systems
 .DS_Store
@@ -25,3 +26,6 @@ coverage/
 
 # Local databases
 *.db
+
+# Runtime vehicle uploads
+backend/uploads/

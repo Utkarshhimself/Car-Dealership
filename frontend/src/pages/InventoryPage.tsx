@@ -1,0 +1,13 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { api, uploadsUrl } from "../api/client";
+import { AppShell } from "../components/AppShell";
+import { useAuth } from "../hooks/useAuth";
+import type { VehiclePage } from "../types/vehicle";
+
+export function InventoryPage() {
+  const { token } = useAuth(); const [make, setMake] = useState(""); const [page, setPage] = useState(1);
+  const [data, setData] = useState<VehiclePage | null>(null); const [error, setError] = useState<string | null>(null);
+  useEffect(() => { const query = new URLSearchParams({ page: String(page), page_size: "12", ...(make ? { make } : {}) }); api<VehiclePage>(`/vehicles?${query}`, {}, token).then(setData).catch((e: unknown) => setError(e instanceof Error ? e.message : "Unable to load inventory")); }, [make, page, token]);
+  return <AppShell><section className="inventory-hero"><div><p className="eyebrow">Motorhouse / 2026 collection</p><h1>Machine, made personal.</h1><p>Distinctive vehicles selected for the way you want to move.</p></div></section><section className="inventory-toolbar"><label>Search the collection<input className="filter-input" placeholder="Make, model, or category" value={make} onChange={(e) => { setMake(e.target.value); setPage(1); }} /></label><span>{data?.total ?? "—"} vehicles</span></section>{error ? <p className="form-error">{error}</p> : !data ? <p>Loading inventory…</p> : <><div className="vehicle-grid">{data.items.map((v) => <Link className="vehicle-card" key={v.id} to={`/vehicles/${v.id}`}>{v.image_filename ? <img src={uploadsUrl(v.image_filename)} alt={`${v.make} ${v.model}`} /> : <div className="vehicle-placeholder">{v.make.slice(0, 1)}{v.model.slice(0, 1)}</div>}<div className="vehicle-card-content"><p className="eyebrow">{v.category}</p><h2>{v.make} {v.model}</h2><strong>${Number(v.price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong><span>{v.quantity} in stock</span></div></Link>)}</div>{data.items.length === 0 && <p>No vehicles match this filter.</p>}<div className="pagination"><button disabled={page === 1} onClick={() => setPage(page - 1)}>Previous</button><span>Page {page}</span><button disabled={page * data.page_size >= data.total} onClick={() => setPage(page + 1)}>Next</button></div></>}</AppShell>;
+}

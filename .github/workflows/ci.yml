@@ -7,6 +7,20 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16.11-alpine
+        env:
+          POSTGRES_DB: car_dealership_test
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test_user -d car_dealership_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     defaults:
       run:
         working-directory: backend
@@ -16,8 +30,21 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
-      - run: ruff check .
-      - run: pytest
+      - name: Lint
+        run: ruff check app tests
+      - name: Apply migrations
+        run: alembic upgrade head
+        env: &backend_env
+          DB_HOST: localhost
+          DB_PORT: "5432"
+          DB_NAME: car_dealership_test
+          DB_USER: test_user
+          DB_PASSWORD: test_password
+          JWT_SECRET_KEY: test-only-secret-not-for-production
+          TEST_DATABASE_URL: postgresql+psycopg://test_user:test_password@localhost:5432/car_dealership_test
+      - name: Test
+        run: pytest
+        env: *backend_env
 
   frontend:
     runs-on: ubuntu-latest
@@ -30,6 +57,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: frontend/package.json
-      - run: npm install
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test
       - run: npm run build
