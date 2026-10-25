@@ -57,7 +57,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           method: "POST",
           body: JSON.stringify({ email, password }),
         });
+
+        // Load the user before navigation so protected routes do not briefly see an empty session.
+        const signedInUser = await api<User>("/auth/me", {}, result.access_token);
         localStorage.setItem(TOKEN_KEY, result.access_token);
+        setUser(signedInUser);
         setToken(result.access_token);
       },
       async register(email, password) {
