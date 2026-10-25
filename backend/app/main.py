@@ -9,9 +9,7 @@ from app.db.session import engine
 from app.services.uploads import UPLOAD_DIRECTORY
 
 app = FastAPI(title="Car Dealership Inventory API", version="0.1.0")
-@app.get("/health")
-def health_check():
-    return {"status": "healthy"}
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -22,7 +20,6 @@ app.add_middleware(
 app.include_router(api_router, prefix="/api")
 UPLOAD_DIRECTORY.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
-
 
 @app.get("/health", tags=["health"])
 def health_check() -> dict[str, str]:
